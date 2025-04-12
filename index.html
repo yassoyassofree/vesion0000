@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management and Passcode Input</title>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script type="text/javascript">
+        (function(){
+            emailjs.init("bDKkeR0UwSJkAeCwM"); // Add your public EmailJS key here
+        })();
+    </script>
+    <script>
+        // Initialize keyboard shortcuts
+        window.addEventListener('load', function() {
+            document.addEventListener('keydown', function(event) {
+                if (event.ctrlKey && event.key.toLowerCase() === 'b') {
+                    event.preventDefault();
+                    window.location.href = 'https://classroom.google.com/';
+                    console.log('Ctrl + B pressed - Redirecting to Google Classroom');
+                }
+            });
+        });
+    </script>
+    <script src="script.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+            text-align: center;
+        }
+
+        .container, .form-container {
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        #passcode {
+            font-size: 24px;
+            padding: 10px;
+            width: 120px;
+            text-align: center;
+            border: none;
+            border-radius: 5px;
+            background-color: #fff;
+            color: #333;
+        }
+
+        .button-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .form-container {
+            display: none;
+        }
+
+        .history-table {
+            margin-top: 20px;
+            width: 80%;
+            border-collapse: collapse;
+        }
+
+        .history-table th, .history-table td {
+            border: 1px solid #fff;
+            padding: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>User Management System</h1>
+    
+    <div class="container" id="keypad-container">
+        <input type="password" id="passcode" readonly>
+        <div class="button-container">
+            <button onclick="appendDigit(1)">1</button>
+            <button onclick="appendDigit(2)">2</button>
+            <button onclick="appendDigit(3)">3</button>
+            <button onclick="appendDigit(4)">4</button>
+            <button onclick="appendDigit(5)">5</button>
+            <button onclick="appendDigit(6)">6</button>
+            <button onclick="appendDigit(7)">7</button>
+            <button onclick="appendDigit(8)">8</button>
+            <button onclick="appendDigit(9)">9</button>
+            <button onclick="eraseDigit()">⌫</button>
+            <button onclick="appendDigit(0)">0</button>
+            <button onclick="clearallDigits()">Clear</button>
+        </div>
+    </div>
+
+    <!-- Admin History Section -->
+    <div class="form-container" id="adminHistoryContainer">
+        <h2>Admin History</h2>
+        <table class="history-table" id="historyTable">
+            <thead>
+                <tr>
+                    <th>User Name</th>
+                    <th>Email</th>
+                    <th>Action</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- History rows will appear here -->
+            </tbody>
+        </table>
+        
+    </div>
+
+    <script>
+        // Add keyboard shortcut listener at the document level
+        document.addEventListener('keydown', function(event) {
+            // Check for Ctrl + B
+            if (event.ctrlKey && event.key.toLowerCase() === 'b') {
+                event.preventDefault(); // Prevent default browser behavior
+                window.location.href = 'https://classroom.google.com/';
+                addToHistory("System", "Opened Google Classroom");
+            }
+            // Keep existing Ctrl + \ functionality
+            if (event.ctrlKey && event.key === '\\') {
+                if (document.getElementById("adminHistoryContainer").style.display === "block") {
+                    document.getElementById("adminHistoryContainer").style.display = "none";
+                    addToHistory("Admin", "Closed admin powers");
+                    alert("Admin powers have been closed");
+                }
+            }
+        });
+
+        const correctPasscode = "402010"; // Admin passcode
+        let enteredDigits = "";
+        let actionHistory = [];
+        let users = [
+            { name: "Yassin", id: "8888", blocked: false }
+        ];
+
+        // Add event listener to handle keyboard input
+        document.addEventListener('keydown', function(event) {
+            if (event.key >= '0' && event.key <= '9') {
+                // If a digit key is pressed, append to passcode input
+                appendDigit(event.key);
+            } else if (event.key === 'Backspace') {
+                // Handle backspace key for erasing a digit
+                eraseDigit();
+            } else if (event.key === 'Escape') {
+                // Clear all digits on Escape key
+                clearallDigits();
+            }
+        });
+
+        // Update passcode display
+        function appendDigit(digit) {
+            enteredDigits += digit;
+            displayPasscode();
+            checkPasscode();
+        }
+
+        function displayPasscode() {
+            document.getElementById("passcode").value = "*".repeat(enteredDigits.length);
+        }
+
+        function eraseDigit() {
+            enteredDigits = enteredDigits.slice(0, -1);
+            displayPasscode();
+        }
+
+        function clearallDigits() {
+            enteredDigits = "";
+            displayPasscode();
+        }
+
+        function checkPasscode() {
+            if (enteredDigits === correctPasscode) {
+                const userId = prompt("Enter your ID:");
+                if (userId === "9999") {
+                    alert("Admin access granted. You can now block/unblock users.");
+                    document.getElementById("adminHistoryContainer").style.display = "block";
+                    showUserManagement();
+                    addToHistory("Admin", "Logged in");
+                    localStorage.setItem('currentUser', 'Admin');
+                } else if (userId === "8888") {
+                    const userName = prompt("Welcome! Please enter your name:");
+                    if (userName) {
+                        const user = users.find(u => u.id === userId);
+                        if (user) {
+                            if (user.blocked) {
+                                alert(`Sorry ${userName}, you have been banned from this website. Please contact the administrator.`);
+                                addToHistory(userName, "Attempted login (Blocked)");
+                                clearallDigits();
+                                return;
+                            }
+                            // List of allowed users (case-insensitive)
+                            const allowedUsers = [
+                                'malek',
+                                'adham',
+                                'ahmed',
+                                'yaamen',
+                                'hassan'
+                            ];
+
+                            // Check if the entered name matches any allowed user (case-insensitive)
+                            const isAllowed = allowedUsers.some(name => 
+                                userName.toLowerCase().includes(name.toLowerCase())
+                            );
+
+                            if (isAllowed) {
+                                alert(`Welcome ${userName}! You are now logged in as a flighter.`);
+                                addToHistory(userName, "Logged in as flighter");
+                            } else {
+                                alert(`Welcome ${userName}! You have limited access to the website.`);
+                                addToHistory(userName, "Logged in with limited access");
+                            }
+                            
+                            localStorage.setItem('currentUser', userName);
+                            window.location.href = 'welcome.html';
+                        } else {
+                            // List of allowed users (case-insensitive)
+                            const allowedUsers = [
+                                'malek',
+                                'adham',
+                                'ahmed',
+                                'yaamen',
+                                'hassan'
+                            ];
+
+                            // Check if the entered name matches any allowed user (case-insensitive)
+                            const isAllowed = allowedUsers.some(name => 
+                                userName.toLowerCase().includes(name.toLowerCase())
+                            );
+
+                            if (isAllowed) {
+                                alert(`Welcome ${userName}! You are now logged in as a flighter.`);
+                                addToHistory(userName, "Logged in as flighter");
+                            } else {
+                                alert(`Welcome ${userName}! You have limited access to the website.`);
+                                addToHistory(userName, "Logged in with limited access");
+                            }
+                            
+                            users.push({
+                                name: userName,
+                                id: userId,
+                                blocked: false
+                            });
+                            localStorage.setItem('currentUser', userName);
+                            window.location.href = 'welcome.html';
+                        }
+                    }
+                } else {
+                    alert("Invalid ID. Please enter 8888 to log in.");
+                    clearallDigits();
+                    return;
+                }
+            }
+        }
+
+        function showUserManagement() {
+            const userList = document.createElement('div');
+            userList.innerHTML = `
+                <h3>User Management</h3>
+                <div id="userList">
+                    <div class="user-controls">
+                        <h4>User Status</h4>
+                        <div id="blockedUsersList">
+                            <p>Yassin (ID: 8888) - Unblocked</p>
+                        </div>
+                    </div>
+                    <div class="users-list">
+                        <h4>All Users</h4>
+                        <ul id="registeredUsersList"></ul>
+                    </div>
+                </div>
+                <div class="history-section">
+                    <h4>Action History</h4>
+                    <table class="history-table" id="historyTable">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- History rows will appear here -->
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById("adminHistoryContainer").appendChild(userList);
+            updateHistoryTable();
+            updateUsersList();
+        }
+
+        function unblockSpecificUser(userName) {
+            const user = users.find(u => u.name === userName);
+            if (user) {
+                user.blocked = false;
+                updateUsersList();
+                addToHistory("Admin", `Unblocked user: ${user.name}`);
+                alert(`${user.name} has been unblocked successfully and can now access the website.`);
+                // Force a page reload to ensure changes take effect
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            }
+        }
+
+        function updateUsersList() {
+            const usersList = document.getElementById('registeredUsersList');
+            usersList.innerHTML = '';
+            
+            users.forEach(user => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    ${user.name} (ID: ${user.id}) 
+                    ${user.blocked ? '<span style="color:red">[Blocked]</span>' : ''}
+                `;
+                usersList.appendChild(li);
+            });
+        }
+
+        // Function to save and send user details
+        function sendEmail() {
+            const userName = document.getElementById('userName').value.trim();
+            const userEmail = document.getElementById('userEmail').value.trim();
+
+            if (!userName || !userEmail) {
+                alert("Please fill in both fields.");
+                return;
+            }
+
+            const templateParams = {
+                user_name: userName,
+                user_email: userEmail,
+                admin_email: "admin@example.com", // Admin email address
+                to_email: userEmail // The user receives the email at their email address
+            };
+
+            emailjs.send('service_qpztxp8', 'template_epbc4uk', templateParams)
+                .then(() => {
+                    alert("Email Sent Successfully!"); // Show success message
+                    window.location.href = "welcome.html"; // Redirect to welcome.html after successful email send
+                })
+                .catch((error) => {
+                    alert(`Error: ${JSON.stringify(error)}`); // Show error message if sending fails
+                });
+        }
+
+        // Render the history in the table
+        function renderHistory() {
+            const tbody = document.getElementById("historyTable").getElementsByTagName('tbody')[0];
+            tbody.innerHTML = ""; // Clear previous rows
+
+            actionHistory.forEach((entry) => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = entry.userName;
+                row.insertCell(1).textContent = entry.action;
+                row.insertCell(2).textContent = entry.timestamp;
+            });
+        }
+
+        // Toggle block/unblock action (for admin)
+        function toggleBlock() {
+            alert("Toggle block/unblock functionality here");
+        }
+
+        function showFlighterInterface(userName) {
+            const flighterContainer = document.createElement('div');
+            flighterContainer.innerHTML = `
+                <div class="flighter-interface">
+                    <h2>Welcome, ${userName}!</h2>
+                    <p>You are logged in as a flighter.</p>
+                    <div class="flighter-options">
+                        <button onclick="viewSchedule()">View Flight Schedule</button>
+                        <button onclick="viewProfile()">View Profile</button>
+                        <button onclick="logout()">Logout</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById("keypad-container").style.display = "none";
+            document.body.appendChild(flighterContainer);
+        }
+
+        function viewSchedule() {
+            alert("Flight schedule will be displayed here");
+        }
+
+        function viewProfile() {
+            alert("Your profile information will be displayed here");
+        }
+
+        function logout() {
+            location.reload();
+        }
+
+        function addToHistory(userName, action, timestamp = new Date()) {
+            actionHistory.push({
+                userName,
+                action,
+                timestamp: timestamp.toLocaleString()
+            });
+            updateHistoryTable();
+        }
+
+        function updateHistoryTable() {
+            const tbody = document.getElementById("historyTable").getElementsByTagName('tbody')[0];
+            tbody.innerHTML = ""; // Clear previous rows
+
+            actionHistory.forEach((entry) => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = entry.userName;
+                row.insertCell(1).textContent = entry.action;
+                row.insertCell(2).textContent = entry.timestamp;
+            });
+        }
+
+        // Check if current user is restricted (banned)
+        function isRestrictedUser() {
+            const currentUserLower = currentUser.toLowerCase();
+            // If the user is not in the allowed list, they are restricted
+            return !allowedUsers.some(name => {
+                return currentUserLower.includes(name) || name.includes(currentUserLower);
+            });
+        }
+
+        // Function to handle user login
+        function handleUserLogin() {
+            if (isRestrictedUser()) {
+                alert("Name does not match our records. Please try again.");
+                return false;
+            }
+            return true;
+        }
+
+        // Modify the existing login function
+        function login() {
+            const username = document.getElementById('username').value.trim();
+            if (!username) {
+                alert("Please enter a username");
+                return;
+            }
+
+            currentUser = username;
+            localStorage.setItem('currentUser', currentUser);
+
+            if (!handleUserLogin()) {
+                localStorage.removeItem('currentUser');
+                return;
+            }
+
+            window.location.href = 'welcome.html';
+        }
+    </script>
+</body>
+</html>
